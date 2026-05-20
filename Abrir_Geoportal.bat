@@ -1,0 +1,3 @@
+@echo off
+echo Iniciando o MDGEO Geoportal...
+start index.html
