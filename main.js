@@ -691,32 +691,53 @@ const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 // Set default basemap
 hybridMap.addTo(map);
 
-// Base Map Control
+// Camadas de geologia (WMS público CPRM / Serviço Geológico do Brasil)
+const cprmWmsDefaults = {
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    attribution: '&copy; <a href="https://www.cprm.gov.br/" target="_blank" rel="noopener">CPRM/SGB</a>'
+};
+
+const geology1M = L.tileLayer.wms(
+    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Lito_1000000/MapServer/WMSServer',
+    { ...cprmWmsDefaults, layers: '0', opacity: 0.75 }
+);
+
+const geology250k = L.tileLayer.wms(
+    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Lito_250000/MapServer/WMSServer',
+    { ...cprmWmsDefaults, layers: '0', opacity: 0.75 }
+);
+
+const hydrogeologyDomains = L.tileLayer.wms(
+    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/DominiosHidrogeologicos/MapServer/WMSServer',
+    { ...cprmWmsDefaults, layers: '0', opacity: 0.7 }
+);
+
+const geologyOutcrops = L.tileLayer.wms(
+    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Afloramentos/MapServer/WMSServer',
+    { ...cprmWmsDefaults, layers: '0', opacity: 0.85 }
+);
+
 const baseMaps = {
     "Escuro (Dark Mode)": darkMap,
     "Satélite Híbrido": hybridMap,
     "Ruas / Topográfico": streetMap
 };
-L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
-function setBasemapPlanetIcon() {
-    const toggle = document.querySelector('.leaflet-control-layers-toggle');
-    if (!toggle) return;
+const overlayMaps = {
+    "Geologia 1:1.000.000": geology1M,
+    "Geologia 1:250.000": geology250k,
+    "Domínios hidrogeológicos": hydrogeologyDomains,
+    "Afloramentos": geologyOutcrops
+};
 
-    toggle.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M2.5 12h19"/>
-            <path d="M12 2.5c-2.8 3.2-2.8 15.8 0 19"/>
-            <path d="M12 2.5c2.8 3.2 2.8 15.8 0 19"/>
-        </svg>
-    `;
-    toggle.style.backgroundImage = 'none';
-    toggle.setAttribute('title', 'Mapas base');
-}
-
-setBasemapPlanetIcon();
-setTimeout(setBasemapPlanetIcon, 0);
+window.MDGEO_MAP_UI = {
+    map,
+    baseMaps,
+    overlayMaps,
+    defaultBase: hybridMap
+};
 
 // ==========================================
 // GeoJSON Data Loading & Logic
