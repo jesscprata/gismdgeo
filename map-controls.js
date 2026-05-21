@@ -1,11 +1,12 @@
 /**
- * Controles do mapa: mapa base, geologia e legenda (botões separados).
+ * Controles do mapa: mapa base e geologia.
  */
 (function () {
     const cfg = window.MDGEO_MAP_UI;
     if (!cfg) return;
 
-    const { map, baseMaps, overlayMaps, defaultBase } = cfg;
+    const { map, baseMaps, defaultBase } = cfg;
+    const geo = window.MDGEO_GEOLOGY;
     const mapContainer = document.querySelector('.map-container');
     if (!mapContainer) return;
 
@@ -19,14 +20,6 @@
         geology: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 3L21 8.5V9.5L12 15L3 9.5V8.5L12 3Z" opacity="0.55"/>
             <path d="M12 9L21 14.5V15.5L12 21L3 15.5V14.5L12 9Z"/>
-        </svg>`,
-        legend: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M5 5.5L9 5.5L7 3.5Z"/>
-            <rect x="4" y="10" width="5" height="5" rx="0.5"/>
-            <circle cx="6.5" cy="19" r="2.5"/>
-            <rect x="12" y="4" width="9" height="2" rx="1" opacity="0.9"/>
-            <rect x="12" y="11" width="9" height="2" rx="1" opacity="0.9"/>
-            <rect x="12" y="18" width="9" height="2" rx="1" opacity="0.9"/>
         </svg>`
     };
 
@@ -41,11 +34,13 @@
     const panels = {};
 
     function bringProjectsToFront() {
-        map.eachLayer((layer) => {
-            if (layer instanceof L.GeoJSON) {
-                layer.bringToFront();
-            }
-        });
+        if (geo && geo.bringProjectsToFront) {
+            geo.bringProjectsToFront();
+        } else {
+            map.eachLayer((layer) => {
+                if (layer instanceof L.GeoJSON) layer.bringToFront();
+            });
+        }
     }
 
     function setBaseMap(layer) {
@@ -97,78 +92,90 @@
 
     function buildGeologyPanel() {
         const wrap = document.createElement('div');
+        const status = document.createElement('p');
+        status.className = 'map-tool-status';
+        status.style.cssText = 'margin-top:0.65rem;font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.45;';
 
-        Object.entries(overlayMaps).forEach(([label, layer]) => {
+        if (geo && geo.hasOnline()) {
+            const online = geo.getOnlineLayer();
             const labelEl = document.createElement('label');
             labelEl.className = 'map-tool-option';
             const input = document.createElement('input');
             input.type = 'checkbox';
             input.addEventListener('change', () => {
                 if (input.checked) {
-                    layer.addTo(map);
+                    online.addTo(map);
                 } else {
-                    map.removeLayer(layer);
+                    map.removeLayer(online);
                 }
                 bringProjectsToFront();
             });
             const span = document.createElement('span');
-            span.textContent = label;
+            span.textContent = 'Geologia do Brasil — online (SGB 1:2.500.000)';
             labelEl.appendChild(input);
             labelEl.appendChild(span);
             wrap.appendChild(labelEl);
+        }
+
+        const localLabel = document.createElement('label');
+        localLabel.className = 'map-tool-option';
+        const localInput = document.createElement('input');
+        localInput.type = 'checkbox';
+        localInput.disabled = true;
+        const localSpan = document.createElement('span');
+        localSpan.textContent = 'Geologia local (arquivo GeoJSON)';
+        localLabel.appendChild(localInput);
+        localLabel.appendChild(localSpan);
+        wrap.appendChild(localLabel);
+
+        localInput.addEventListener('change', async () => {
+            if (!geo) return;
+            if (localInput.checked) {
+                const layer = await geo.ensureLocalLayer();
+                if (layer) {
+                    layer.addTo(map);
+                    bringProjectsToFront();
+                    status.textContent = 'Camada local carregada.';
+                    status.style.color = 'rgba(125, 194, 97, 0.9)';
+                } else {
+                    localInput.checked = false;
+                    status.textContent =
+                        'Arquivo não encontrado. Baixe os dados do SGB e salve como data/geologia_brasil.geojson (veja data/README_GEOLOGIA.md).';
+                    status.style.color = 'rgba(255, 180, 120, 0.95)';
+                }
+            } else {
+                const layer = await geo.ensureLocalLayer();
+                if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+            }
         });
 
-        const note = document.createElement('p');
-        note.style.cssText = 'margin-top:0.65rem;font-size:0.72rem;color:rgba(255,255,255,0.5);line-height:1.4;';
-        note.textContent = 'Fonte: CPRM/SGB (WMS). Ative com zoom adequado à escala.';
-        wrap.appendChild(note);
+        geo.ensureLocalLayer().then((layer) => {
+            if (layer) {
+                localInput.disabled = false;
+                const n = geo.colorCount ? geo.colorCount() : 0;
+                status.textContent =
+                    n > 0
+                        ? `Arquivo local pronto (${n} cores do QGIS). Marque para exibir.`
+                        : 'Arquivo local disponível. Marque para exibir no mapa.';
+            } else if (!geo.hasOnline()) {
+                status.textContent =
+                    'Serviço online indisponível. Use o arquivo local — instruções em data/README_GEOLOGIA.md.';
+            } else {
+                status.textContent =
+                    'Recomendado: baixe a geologia do SGB e coloque em data/geologia_brasil.geojson (instruções no README).';
+            }
+        });
 
-        return wrap;
-    }
-
-    function buildLegendPanel() {
-        const wrap = document.createElement('div');
-
-        wrap.innerHTML = `
-            <div class="map-legend-section">
-                <div class="map-legend-section-title">Projetos MDGEO</div>
-                <div class="map-legend-item">
-                    <span class="map-legend-symbol"><span class="legend-project-dot"></span></span>
-                    <span class="map-legend-line"></span>
-                    <span>Projeto</span>
-                </div>
-                <div class="map-legend-item">
-                    <span class="map-legend-symbol" style="color:#00e676;font-weight:700;font-size:0.75rem;">●</span>
-                    <span class="map-legend-line"></span>
-                    <span>Situação finalizada</span>
-                </div>
-            </div>
-            <div class="map-legend-section">
-                <div class="map-legend-section-title">Geologia (CPRM/SGB)</div>
-                <div class="map-legend-item">
-                    <span class="map-legend-symbol"><span class="legend-geology-swatch"></span></span>
-                    <span class="map-legend-line"></span>
-                    <span>Unidades / domínios</span>
-                </div>
-                <div class="map-legend-item">
-                    <span class="map-legend-symbol" style="font-size:0.7rem;">◇</span>
-                    <span class="map-legend-line"></span>
-                    <span>Afloramentos</span>
-                </div>
-            </div>
-        `;
-
+        wrap.appendChild(status);
         return wrap;
     }
 
     createPanel('basemap', 'Mapa base', buildBasemapPanel);
     createPanel('geology', 'Geologia', buildGeologyPanel);
-    createPanel('legend', 'Legenda', buildLegendPanel);
 
     const tools = [
         { id: 'basemap', label: 'Mapa base', icon: ICONS.basemap },
-        { id: 'geology', label: 'Geologia', icon: ICONS.geology },
-        { id: 'legend', label: 'Legenda', icon: ICONS.legend }
+        { id: 'geology', label: 'Geologia', icon: ICONS.geology }
     ];
 
     function closeAllPanels() {

@@ -434,63 +434,6 @@ body {
     line-height: 1.35;
 }
 
-.map-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.4rem 0;
-}
-
-.map-legend-symbol {
-    flex-shrink: 0;
-    width: 1.25rem;
-    height: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.map-legend-line {
-    flex: 1;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 1px;
-}
-
-.map-legend-section {
-    margin-bottom: 0.75rem;
-}
-
-.map-legend-section:last-child {
-    margin-bottom: 0;
-}
-
-.map-legend-section-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.5);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.35rem;
-}
-
-.legend-project-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #6b9bb8;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
-}
-
-.legend-geology-swatch {
-    width: 18px;
-    height: 14px;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #c4a574, #8b7355, #6b8e6b, #9b8b6e);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
 @media (max-width: 768px) {
     .map-toolbar {
         top: 5.5rem;

@@ -691,51 +691,15 @@ const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 // Set default basemap
 hybridMap.addTo(map);
 
-// Camadas de geologia (WMS público CPRM / Serviço Geológico do Brasil)
-const cprmWmsDefaults = {
-    format: 'image/png',
-    transparent: true,
-    version: '1.3.0',
-    attribution: '&copy; <a href="https://www.cprm.gov.br/" target="_blank" rel="noopener">CPRM/SGB</a>'
-};
-
-const geology1M = L.tileLayer.wms(
-    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Lito_1000000/MapServer/WMSServer',
-    { ...cprmWmsDefaults, layers: '0', opacity: 0.75 }
-);
-
-const geology250k = L.tileLayer.wms(
-    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Lito_250000/MapServer/WMSServer',
-    { ...cprmWmsDefaults, layers: '0', opacity: 0.75 }
-);
-
-const hydrogeologyDomains = L.tileLayer.wms(
-    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/DominiosHidrogeologicos/MapServer/WMSServer',
-    { ...cprmWmsDefaults, layers: '0', opacity: 0.7 }
-);
-
-const geologyOutcrops = L.tileLayer.wms(
-    'http://arcgisserver.cprm.gov.br:6080/arcgis/services/Afloramentos/MapServer/WMSServer',
-    { ...cprmWmsDefaults, layers: '0', opacity: 0.85 }
-);
-
 const baseMaps = {
     "Escuro (Dark Mode)": darkMap,
     "Satélite Híbrido": hybridMap,
     "Ruas / Topográfico": streetMap
 };
 
-const overlayMaps = {
-    "Geologia 1:1.000.000": geology1M,
-    "Geologia 1:250.000": geology250k,
-    "Domínios hidrogeológicos": hydrogeologyDomains,
-    "Afloramentos": geologyOutcrops
-};
-
 window.MDGEO_MAP_UI = {
     map,
     baseMaps,
-    overlayMaps,
     defaultBase: hybridMap
 };
 

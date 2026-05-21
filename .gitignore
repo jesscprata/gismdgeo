@@ -1,0 +1,8 @@
+# Geologia — GeoJSON grande (manter só na sua máquina; cores em geologia_cores.json vão no Git)
+data/geologia_brasil.geojson
+data/geologia_brasil.sld
+data/*.zip
+data/*.shp
+data/*.shx
+data/*.dbf
+data/*.prj
