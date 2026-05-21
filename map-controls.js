@@ -95,76 +95,58 @@
         const status = document.createElement('p');
         status.className = 'map-tool-status';
         status.style.cssText = 'margin-top:0.65rem;font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.45;';
+        status.textContent = 'Verificando arquivo…';
 
-        if (geo && geo.hasOnline()) {
-            const online = geo.getOnlineLayer();
-            const labelEl = document.createElement('label');
-            labelEl.className = 'map-tool-option';
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.addEventListener('change', () => {
-                if (input.checked) {
-                    online.addTo(map);
-                } else {
-                    map.removeLayer(online);
-                }
-                bringProjectsToFront();
-            });
-            const span = document.createElement('span');
-            span.textContent = 'Geologia do Brasil — online (SGB 1:2.500.000)';
-            labelEl.appendChild(input);
-            labelEl.appendChild(span);
-            wrap.appendChild(labelEl);
-        }
+        const labelEl = document.createElement('label');
+        labelEl.className = 'map-tool-option';
+        const geoInput = document.createElement('input');
+        geoInput.type = 'checkbox';
+        geoInput.disabled = true;
+        const geoSpan = document.createElement('span');
+        geoSpan.textContent = 'Geologia do Brasil';
+        labelEl.appendChild(geoInput);
+        labelEl.appendChild(geoSpan);
+        wrap.appendChild(labelEl);
 
-        const localLabel = document.createElement('label');
-        localLabel.className = 'map-tool-option';
-        const localInput = document.createElement('input');
-        localInput.type = 'checkbox';
-        localInput.disabled = true;
-        const localSpan = document.createElement('span');
-        localSpan.textContent = 'Geologia local (arquivo GeoJSON)';
-        localLabel.appendChild(localInput);
-        localLabel.appendChild(localSpan);
-        wrap.appendChild(localLabel);
-
-        localInput.addEventListener('change', async () => {
+        geoInput.addEventListener('change', async () => {
             if (!geo) return;
-            if (localInput.checked) {
-                const layer = await geo.ensureLocalLayer();
+            if (geoInput.checked) {
+                geoInput.disabled = true;
+                const layer = await geo.ensureLocalLayer((msg) => {
+                    status.textContent = msg;
+                    status.style.color = 'rgba(255, 255, 255, 0.7)';
+                });
+                geoInput.disabled = false;
                 if (layer) {
                     layer.addTo(map);
                     bringProjectsToFront();
-                    status.textContent = 'Camada local carregada.';
-                    status.style.color = 'rgba(125, 194, 97, 0.9)';
+                    status.textContent = 'Geologia exibida no mapa.';
+                    status.style.color = 'rgba(125, 194, 97, 0.95)';
                 } else {
-                    localInput.checked = false;
-                    status.textContent =
-                        'Arquivo não encontrado. Baixe os dados do SGB e salve como data/geologia_brasil.geojson (veja data/README_GEOLOGIA.md).';
+                    geoInput.checked = false;
+                    status.textContent = geo.getLoadError() || 'Não foi possível carregar a geologia.';
                     status.style.color = 'rgba(255, 180, 120, 0.95)';
                 }
             } else {
                 const layer = await geo.ensureLocalLayer();
                 if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+                const probe = await geo.probeLocal();
+                status.textContent = probe.message;
+                status.style.color = 'rgba(255, 255, 255, 0.55)';
             }
         });
 
-        geo.ensureLocalLayer().then((layer) => {
-            if (layer) {
-                localInput.disabled = false;
-                const n = geo.colorCount ? geo.colorCount() : 0;
-                status.textContent =
-                    n > 0
-                        ? `Arquivo local pronto (${n} cores do QGIS). Marque para exibir.`
-                        : 'Arquivo local disponível. Marque para exibir no mapa.';
-            } else if (!geo.hasOnline()) {
-                status.textContent =
-                    'Serviço online indisponível. Use o arquivo local — instruções em data/README_GEOLOGIA.md.';
-            } else {
-                status.textContent =
-                    'Recomendado: baixe a geologia do SGB e coloque em data/geologia_brasil.geojson (instruções no README).';
-            }
-        });
+        if (geo) {
+            geo.probeLocal().then((probe) => {
+                geoInput.disabled = !probe.ok;
+                status.textContent = probe.message;
+                status.style.color = probe.ok
+                    ? 'rgba(255, 255, 255, 0.55)'
+                    : 'rgba(255, 180, 120, 0.95)';
+            });
+        } else {
+            status.textContent = 'Módulo de geologia indisponível.';
+        }
 
         wrap.appendChild(status);
         return wrap;

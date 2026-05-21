@@ -1,5 +1,5 @@
 /**
- * Geologia do Brasil: cores do QGIS (SLD) + GeoJSON local.
+ * Geologia do Brasil — GeoJSON local + cores do QGIS (SLD).
  */
 (function () {
     const cfg = window.MDGEO_MAP_UI;
@@ -8,22 +8,22 @@
     const { map } = cfg;
     const LOCAL_GEOLOGY_URL = 'data/geologia_brasil.geojson';
     const COLORS_URL = 'data/geologia_cores.json';
-    const SGB_MAPSERVER =
-        'https://geoportal.sgb.gov.br/server/rest/services/geologia/litoestratigrafia_2500000/MapServer';
-
     const DEFAULT_GEOLOGY_COLOR = '#b8b0a8';
+
     let colorBySigla = {};
     let colorsReady = false;
+    let localLayer = null;
+    let loadState = 'idle';
+    let loadError = null;
+    const canvasRenderer = L.canvas({ padding: 0.5 });
 
     async function loadColorMap() {
         if (colorsReady) return colorBySigla;
         try {
             const res = await fetch(COLORS_URL);
-            if (res.ok) {
-                colorBySigla = await res.json();
-            }
+            if (res.ok) colorBySigla = await res.json();
         } catch (err) {
-            console.warn('Mapa de cores da geologia não carregado:', err);
+            console.warn('Mapa de cores da geologia:', err);
         }
         colorsReady = true;
         return colorBySigla;
@@ -46,60 +46,111 @@
         };
     }
 
+    function formatGeologyTitle(p) {
+        const nome = p.NOME_UNIDA || p.NOME_UNID || p.NOME || 'Unidade geológica';
+        const hierarquia = String(p.HIERARQUIA || '').trim();
+        const omitirHierarquia =
+            !hierarquia ||
+            hierarquia.toLowerCase() === 'não definida' ||
+            hierarquia.toLowerCase() === 'nao definida';
+
+        if (omitirHierarquia) return nome;
+        return `${hierarquia} ${nome}`;
+    }
+
     function bindGeologyPopup(feature, layer) {
         const p = feature.properties || {};
-        const nome = p.NOME_UNIDA || p.NOME_UNID || p.NOME || 'Unidade geológica';
+        const titulo = formatGeologyTitle(p);
         const sigla = p.SIGLA_UNID || p.SIGLA || '';
+        const eon = p.EON_IDAD_M || p.EON_IDAD_1 || '';
         const idadeMax = p.IDADE_MAX;
         const idadeMin = p.IDADE_MIN;
-        const eon = p.EON_IDAD_M || p.EON_IDAD_1 || '';
         let idadeTxt = '';
         if (idadeMax || idadeMin) {
             idadeTxt = `${idadeMin || '?'} – ${idadeMax || '?'} Ma`;
         }
         layer.bindPopup(
-            `<strong>${nome}</strong>` +
+            `<strong>${titulo}</strong>` +
                 (sigla ? `<br><em>${sigla}</em>` : '') +
                 (eon ? `<br>${eon}` : '') +
                 (idadeTxt ? `<br>Idade: ${idadeTxt}` : '')
         );
     }
 
-    let onlineLayer = null;
-    let localLayer = null;
-    let localLoadAttempted = false;
-    let localAvailable = false;
-
-    if (typeof L.esri !== 'undefined' && L.esri.dynamicMapLayer) {
-        onlineLayer = L.esri.dynamicMapLayer({
-            url: SGB_MAPSERVER,
-            opacity: 0.72,
-            attribution: '&copy; <a href="https://www.sgb.gov.br/" target="_blank" rel="noopener">SGB/CPRM</a>'
-        });
-    }
-
     loadColorMap();
 
-    async function ensureLocalLayer() {
+    async function probeLocal() {
+        if (window.location.protocol === 'file:') {
+            return {
+                ok: false,
+                message:
+                    'Abra pelo atalho Abrir_Geoportal.bat (servidor local). Abrir o HTML direto não carrega o GeoJSON.'
+            };
+        }
+        try {
+            const res = await fetch(LOCAL_GEOLOGY_URL, { method: 'HEAD' });
+            if (!res.ok) {
+                return {
+                    ok: false,
+                    message: `Arquivo não encontrado: ${LOCAL_GEOLOGY_URL}`
+                };
+            }
+            const n = Object.keys(colorBySigla).length;
+            return {
+                ok: true,
+                message:
+                    n > 0
+                        ? `Pronto (${n} cores). Marque para carregar — pode levar meio minuto.`
+                        : 'Arquivo encontrado. Marque para carregar no mapa.'
+            };
+        } catch (err) {
+            return {
+                ok: false,
+                message: 'Não foi possível acessar o GeoJSON. Use Abrir_Geoportal.bat.'
+            };
+        }
+    }
+
+    async function ensureLocalLayer(onProgress) {
         if (localLayer) return localLayer;
-        if (localLoadAttempted) return null;
-        localLoadAttempted = true;
+        if (loadState === 'loading') return null;
+        if (loadState === 'error') {
+            loadState = 'idle';
+            loadError = null;
+        }
+
+        if (window.location.protocol === 'file:') {
+            loadError =
+                'Abra pelo Abrir_Geoportal.bat. O navegador bloqueia arquivos locais em file://.';
+            loadState = 'error';
+            return null;
+        }
+
+        loadState = 'loading';
+        if (onProgress) onProgress('Carregando geologia…');
 
         await loadColorMap();
 
         try {
             const res = await fetch(LOCAL_GEOLOGY_URL);
-            if (!res.ok) return null;
-
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            if (onProgress) onProgress('Processando polígonos…');
             const data = await res.json();
+
             localLayer = L.geoJSON(data, {
                 style: geologyStyle,
-                onEachFeature: bindGeologyPopup
+                onEachFeature: bindGeologyPopup,
+                renderer: canvasRenderer
             });
-            localAvailable = true;
+            loadState = 'ready';
+            loadError = null;
             return localLayer;
         } catch (err) {
-            console.warn('Geologia local não carregada:', err);
+            console.error('Geologia local:', err);
+            loadState = 'error';
+            loadError = err.message || 'Falha ao carregar GeoJSON';
             return null;
         }
     }
@@ -113,12 +164,11 @@
     }
 
     window.MDGEO_GEOLOGY = {
-        hasOnline: () => !!onlineLayer,
-        hasLocal: () => localAvailable,
-        getOnlineLayer: () => onlineLayer,
+        probeLocal,
         ensureLocalLayer,
         bringProjectsToFront,
-        localFilePath: LOCAL_GEOLOGY_URL,
+        getLoadError: () => loadError,
+        isLoading: () => loadState === 'loading',
         colorCount: () => Object.keys(colorBySigla).length
     };
 })();
