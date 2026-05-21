@@ -27,17 +27,82 @@ body {
     display: flex;
     height: 100vh;
     width: 100vw;
+    overflow: visible;
 }
 
-/* Sidebar & Glassmorphism */
-.sidebar {
+/* Painel fixo à esquerda */
+.sidebar-shell {
+    position: relative;
+    flex-shrink: 0;
     width: 350px;
-    height: 100%;
+    height: 100vh;
     z-index: 1000;
+    overflow: visible;
+    transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sidebar-shell.is-collapsed {
+    width: 0;
+}
+
+.sidebar {
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    position: relative;
     border-right: 1px solid var(--glass-border);
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-shell.is-collapsed .sidebar {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Seta mostrar / ocultar */
+.sidebar-toggle {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1001;
+    width: 28px;
+    height: 56px;
+    padding: 0;
+    border: 1px solid var(--glass-border);
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 4px 0 16px rgba(31, 38, 135, 0.08);
+    color: var(--primary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-smooth);
+}
+
+.sidebar-toggle:hover {
+    background: #fff;
+    color: var(--secondary-color);
+}
+
+.sidebar-toggle .toggle-icon {
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sidebar-shell.is-collapsed .sidebar-toggle {
+    left: 0;
+    border-left: 1px solid var(--glass-border);
+    border-radius: 0 10px 10px 0;
+    box-shadow: 4px 0 16px rgba(31, 38, 135, 0.12);
+}
+
+.sidebar-shell.is-collapsed .sidebar-toggle .toggle-icon {
+    transform: rotate(180deg);
 }
 
 .glass-panel {
@@ -52,6 +117,7 @@ body {
     border-bottom: 1px solid var(--glass-border);
     background: linear-gradient(135deg, rgba(107, 155, 184, 0.1) 0%, rgba(125, 194, 97, 0.05) 100%);
     text-align: center;
+    flex-shrink: 0;
 }
 
 .brand-logo {
@@ -201,8 +267,10 @@ body {
 
 /* Map Container */
 .map-container {
-    flex-grow: 1;
+    flex: 1;
     position: relative;
+    min-width: 0;
+    height: 100vh;
 }
 
 #map {
@@ -253,4 +321,58 @@ body {
 .leaflet-bar a:hover {
     background-color: #ffffff;
     color: var(--primary-color);
+}
+
+/* Ícone de planetinha nos mapas base */
+.leaflet-control-layers-toggle {
+    background-image: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.leaflet-control-layers-toggle svg {
+    color: var(--primary-color);
+    display: block;
+}
+
+/* ==========================================
+   Responsividade para Celular (Mobile)
+   ========================================== */
+@media (max-width: 768px) {
+    .sidebar-shell {
+        width: min(320px, 88vw);
+    }
+
+    .sidebar-shell.is-collapsed {
+        width: 0;
+    }
+
+    .sidebar-header {
+        padding: 1rem;
+    }
+
+    .brand-logo {
+        max-width: 130px;
+    }
+
+    .sidebar-content {
+        padding: 1rem;
+    }
+
+    .stats-box {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .project-details {
+        min-height: 120px;
+    }
 }

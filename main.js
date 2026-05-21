@@ -695,6 +695,25 @@ const baseMaps = {
 };
 L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
+function setBasemapPlanetIcon() {
+    const toggle = document.querySelector('.leaflet-control-layers-toggle');
+    if (!toggle) return;
+
+    toggle.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M2.5 12h19"/>
+            <path d="M12 2.5c-2.8 3.2-2.8 15.8 0 19"/>
+            <path d="M12 2.5c2.8 3.2 2.8 15.8 0 19"/>
+        </svg>
+    `;
+    toggle.style.backgroundImage = 'none';
+    toggle.setAttribute('title', 'Mapas base');
+}
+
+setBasemapPlanetIcon();
+setTimeout(setBasemapPlanetIcon, 0);
+
 // ==========================================
 // GeoJSON Data Loading & Logic
 // ==========================================
