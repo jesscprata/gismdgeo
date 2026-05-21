@@ -644,10 +644,14 @@ const geojsonData = {
 }
 ;
 
+// Vista inicial: Brasil centralizado
+const BRAZIL_CENTER = [-14.235, -51.925];
+const BRAZIL_ZOOM = 4;
+
 // Map Initialization
 const map = L.map('map', {
     zoomControl: false // We will add it later in a different position
-}).setView([-14.235, -51.925], 4); // Centro do Brasil aprox.
+}).setView(BRAZIL_CENTER, BRAZIL_ZOOM);
 
 // Reposition zoom control to top-right
 L.control.zoom({
@@ -823,11 +827,8 @@ function loadGeoJSON() {
             },
             onEachFeature: onEachFeature
         }).addTo(map);
-        
-        // Ajustar zoom para caber todos os pontos
-        if(allFeatures.length > 0) {
-            map.fitBounds(geojsonLayer.getBounds(), { padding: [50, 50] });
-        }
+
+        map.setView(BRAZIL_CENTER, BRAZIL_ZOOM);
     } catch (err) {
         console.error("Erro ao carregar o GeoJSON:", err);
         totalProjectsEl.innerText = "Erro!";
